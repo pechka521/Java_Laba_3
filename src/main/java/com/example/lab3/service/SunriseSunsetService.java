@@ -59,12 +59,24 @@ public class SunriseSunsetService {
 
     @Transactional(readOnly = true)
     public List<SunriseSunset> getAll() {
-        return repository.findAll();
+        String cacheKey = "all_sunrise_sunset";
+        if (sunriseSunsetCache.containsKey(cacheKey)) {
+            return sunriseSunsetCache.get(cacheKey);
+        }
+        List<SunriseSunset> sunriseSunsets = repository.findAll();
+        sunriseSunsetCache.put(cacheKey, sunriseSunsets);
+        return sunriseSunsets;
     }
 
     @Transactional(readOnly = true)
     public Optional<SunriseSunset> getById(Long id) {
-        return repository.findById(id);
+        String cacheKey = "sunrise_sunset_" + id;
+        if (sunriseSunsetCache.containsKey(cacheKey)) {
+            return Optional.ofNullable(sunriseSunsetCache.get(cacheKey).get(0));
+        }
+        Optional<SunriseSunset> sunriseSunset = repository.findById(id);
+        sunriseSunset.ifPresent(ss -> sunriseSunsetCache.put(cacheKey, List.of(ss)));
+        return sunriseSunset;
     }
 
     @Transactional(readOnly = true)

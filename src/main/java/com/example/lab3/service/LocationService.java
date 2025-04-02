@@ -22,12 +22,24 @@ public class LocationService {
 
     @Transactional(readOnly = true)
     public List<Location> getAll() {
-        return repository.findAll();
+        String cacheKey = "all_locations";
+        if (locationCache.containsKey(cacheKey)) {
+            return locationCache.get(cacheKey);
+        }
+        List<Location> locations = repository.findAll();
+        locationCache.put(cacheKey, locations);
+        return locations;
     }
 
     @Transactional(readOnly = true)
     public Optional<Location> getById(Long id) {
-        return repository.findById(id);
+        String cacheKey = "location_" + id;
+        if (locationCache.containsKey(cacheKey)) {
+            return Optional.ofNullable(locationCache.get(cacheKey).get(0));
+        }
+        Optional<Location> location = repository.findById(id);
+        location.ifPresent(l -> locationCache.put(cacheKey, List.of(l)));
+        return location;
     }
 
     @Transactional
