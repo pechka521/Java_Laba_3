@@ -2,11 +2,12 @@ package com.example.lab3.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "locations")
+@Table(name = "location")
 @Data
 public class Location {
     @Id

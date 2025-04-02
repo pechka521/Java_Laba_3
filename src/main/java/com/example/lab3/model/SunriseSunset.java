@@ -2,6 +2,7 @@ package com.example.lab3.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,7 +31,7 @@ public class SunriseSunset {
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
-            name = "location_sunrise_sunset",
+            name = "sunrise_sunset_location",
             joinColumns = @JoinColumn(name = "sunrise_sunset_id"),
             inverseJoinColumns = @JoinColumn(name = "location_id")
     )

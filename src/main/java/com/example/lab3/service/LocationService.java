@@ -7,71 +7,76 @@ import com.example.lab3.repository.SunriseSunsetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class LocationService {
-    private final LocationRepository locationRepo;
-    private final SunriseSunsetRepository sunriseSunsetRepo;
-    private final Map<String, List<Location>> cache = new HashMap<>();
+
+    private final LocationRepository repository;
+    private final SunriseSunsetRepository sunriseSunsetRepository;
+    private final Map<String, List<Location>> locationCache;
 
     @Transactional(readOnly = true)
     public List<Location> getAll() {
-        return locationRepo.findAll();
+        return repository.findAll();
     }
 
     @Transactional(readOnly = true)
     public Optional<Location> getById(Long id) {
-        return locationRepo.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Location> getByCoordinates(double lat, double lon) {
-        String key = "coords:" + lat + ":" + lon;
-        if (cache.containsKey(key)) {
-            return cache.get(key);
-        }
-        List<Location> result = locationRepo.findByCoordinates(lat, lon);
-        cache.put(key, result);
-        return result;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Location> getByDate(String date) {
-        String key = "date:" + date;
-        if (cache.containsKey(key)) {
-            return cache.get(key);
-        }
-        List<Location> result = locationRepo.findByDate(date);
-        cache.put(key, result);
-        return result;
+        return repository.findById(id);
     }
 
     @Transactional
     public Location create(Location location, List<Long> sunriseSunsetIds) {
-        if (sunriseSunsetIds != null) {
-            Set<SunriseSunset> sunsets = new HashSet<>(sunriseSunsetRepo.findAllById(sunriseSunsetIds));
-            location.setSunriseSunsets(sunsets);
+        if (sunriseSunsetIds != null && !sunriseSunsetIds.isEmpty()) {
+            List<SunriseSunset> sunriseSunsets = sunriseSunsetRepository.findAllById(sunriseSunsetIds);
+            location.getSunriseSunsets().addAll(sunriseSunsets);
         }
-        return locationRepo.save(location);
+        Location saved = repository.save(location);
+        locationCache.clear();
+        return saved;
     }
 
     @Transactional
-    public Optional<Location> update(Long id, Location updated) {
-        return locationRepo.findById(id).map(existing -> {
-            existing.setName(updated.getName());
-            existing.setCountry(updated.getCountry());
-            return locationRepo.save(existing);
+    public Optional<Location> update(Long id, Location updatedData, List<Long> sunriseSunsetIds) {
+        return repository.findById(id).map(location -> {
+            location.setName(updatedData.getName());
+            location.setCountry(updatedData.getCountry());
+
+            if (sunriseSunsetIds != null) {
+                location.getSunriseSunsets().clear();
+                List<SunriseSunset> sunriseSunsets = sunriseSunsetRepository.findAllById(sunriseSunsetIds);
+                location.getSunriseSunsets().addAll(sunriseSunsets);
+            }
+            Location saved = repository.save(location);
+            locationCache.clear();
+            return saved;
         });
     }
 
     @Transactional
     public boolean delete(Long id) {
-        if (locationRepo.existsById(id)) {
-            locationRepo.deleteById(id);
+        return repository.findById(id).map(location -> {
+            repository.delete(location);
+            locationCache.clear();
             return true;
+        }).orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Location> getLocationsByDate(String date) {
+        String cacheKey = "locations_date_" + date;
+
+        if (locationCache.containsKey(cacheKey)) {
+            return locationCache.get(cacheKey);
         }
-        return false;
+
+        List<Location> locations = repository.findLocationsBySunriseSunsetDate(date);
+        locationCache.put(cacheKey, locations);
+        return locations;
     }
 }
